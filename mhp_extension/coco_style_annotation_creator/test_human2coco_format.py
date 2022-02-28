@@ -5,7 +5,7 @@ import os
 from PIL import Image
 
 import pycococreatortools
-
+from tqdm import tqdm
 
 def get_arguments():
     parser = argparse.ArgumentParser(description="transform mask annotation to coco annotation")
@@ -55,7 +55,7 @@ def main(args):
 
     image_id = 1
 
-    for image_name in os.listdir(args.test_img_dir):
+    for image_name in tqdm(os.listdir(args.test_img_dir)):
         image = Image.open(os.path.join(args.test_img_dir, image_name))
         image_info = pycococreatortools.create_image_info(
             image_id, image_name, image.size
@@ -64,7 +64,7 @@ def main(args):
         image_id += 1
 
     if not os.path.exists(os.path.join(args.json_save_dir)):
-        os.mkdir(os.path.join(args.json_save_dir))
+        os.makedirs(os.path.join(args.json_save_dir), exist_ok=True)
 
     with open('{}/{}.json'.format(args.json_save_dir, args.dataset), 'w') as output_json_file:
         json.dump(coco_output, output_json_file)

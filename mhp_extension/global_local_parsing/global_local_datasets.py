@@ -139,8 +139,9 @@ class CropDataValSet(data.Dataset):
         self.aspect_ratio = crop_size[1] * 1.0 / crop_size[0]
         self.crop_size = np.asarray(crop_size)
 
-        list_path = os.path.join(self.root, self.split_name + '.txt')
-        val_list = [i_id.strip() for i_id in open(list_path)]
+        # list_path = os.path.join(self.root, self.split_name + '.txt')
+        # val_list = [i_id.strip() for i_id in open(list_path)]
+        val_list = [i_id.strip().split('.')[0] for i_id in sorted(os.listdir(os.path.join(self.root, self.split_name)))]
 
         self.val_list = val_list
         self.number_samples = len(self.val_list)
@@ -168,6 +169,7 @@ class CropDataValSet(data.Dataset):
         val_item = self.val_list[index]
         # Load training image
         im_path = os.path.join(self.root, self.split_name, val_item + '.jpg')
+        assert os.path.exists(im_path), im_path
         im = cv2.imread(im_path, cv2.IMREAD_COLOR)
         h, w, _ = im.shape
         # Get person center and scale

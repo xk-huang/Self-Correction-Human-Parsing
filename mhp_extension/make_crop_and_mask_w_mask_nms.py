@@ -33,7 +33,7 @@ def make_crop_and_mask(img_info, pred, file_list, crop_save_dir, mask_save_dir, 
     person_idx = 0
 
     panoptic_seg = np.zeros((img_h, img_w), dtype=np.uint8)
-    assert len(pred[img_id]['instances']) > 0, 'image without instance prediction'
+    assert len(pred[img_id]['instances']) > 0, 'image without instance prediction {}, {}'.format(img_id, img_id in pred.keys())
 
     for instance in pred[img_id]['instances']:
         score = instance['score']
@@ -114,7 +114,7 @@ def get_arguments():
 def main(args):
     img_info_list = json.load(open(args.img_list, encoding='UTF-8'))
     pred = torch.load(args.det_res)
-
+    pred = {d['image_id']-1:d for d in pred}
     crop_save_dir = os.path.join(args.save_dir, 'crop_pic')
     if not os.path.exists(crop_save_dir):
         os.makedirs(crop_save_dir)
@@ -125,9 +125,9 @@ def main(args):
     file_list = []
     for img_info in tqdm(img_info_list['images']):
         json_file, file_list = make_crop_and_mask(img_info, pred, file_list, crop_save_dir, mask_save_dir, args)
-        with open(os.path.join(args.save_dir, 'crop.json'), 'w') as f:
-            json.dump(json_file, f, indent=2)
-
+    # modify: only dump once
+    with open(os.path.join(args.save_dir, 'crop.json'), 'w') as f:
+        json.dump(json_file, f, indent=2)
 
 if __name__ == '__main__':
     args = get_arguments()

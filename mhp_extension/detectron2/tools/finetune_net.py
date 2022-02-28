@@ -48,9 +48,9 @@ register_coco_instances("CIHP_val", {}, "../../data/msrcnn_finetune_annotations/
                         "../../data/instance-level_human_parsing/Validation/Images")
 register_coco_instances("demo_train", {}, "../../demo/annotations/demo_train.json",
                         "../../demo/img")
-register_coco_instances("demo_val", {}, "../../demo/annotations/demo_val.json",
-                        "../../demo/img")
-
+# register_coco_instances("demo_val", {}, "../../demo/annotations/demo_val.json",
+                        # "../../demo/img")
+register_coco_instances("demo_val", {}, os.environ['annotations'], os.environ['img_dir'])
 
 class Trainer(DefaultTrainer):
     """
@@ -71,6 +71,7 @@ class Trainer(DefaultTrainer):
         """
         if output_folder is None:
             output_folder = os.path.join(cfg.OUTPUT_DIR, "inference")
+            os.makedirs(output_folder, exist_ok=True)
         evaluator_list = []
         evaluator_type = MetadataCatalog.get(dataset_name).evaluator_type
         if evaluator_type in ["sem_seg", "coco_panoptic_seg"]:
