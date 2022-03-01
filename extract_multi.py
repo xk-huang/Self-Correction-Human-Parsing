@@ -54,7 +54,7 @@ def schp_pipeline(img_dir, ckpt_dir):
     check_and_run(join(tmp_dir, 'crop_pic'), cmd)
 
     move_root()
-    os.environ['PYTHONPATH'] = '{}:{}'.format(current_dir, os.environ['PYTHONPATH'])
+    os.environ['PYTHONPATH'] = '{}:{}'.format(current_dir, os.environ.get('PYTHONPATH', ''))
     cmd = f"python3 mhp_extension/global_local_parsing/global_local_evaluate.py --data-dir {tmp_dir} --split-name crop_pic --model-restore {ckpt_dir}/exp_schp_multi_cihp_local.pth --log-dir {tmp_dir} --save-results"
     check_and_run(join(tmp_dir, 'crop_pic_parsing'), cmd)
 
