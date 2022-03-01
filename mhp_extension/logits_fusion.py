@@ -206,6 +206,7 @@ def result_saving(fused_output, img_name, img_height, img_width, output_dir, mas
     global_root = os.path.join(output_dir, 'global_parsing')
     instance_root = os.path.join(output_dir, 'instance_parsing')
     tag_dir = os.path.join(output_dir, 'global_tag')
+    schp_dir = os.path.join(output_dir, 'schp')
 
     if not os.path.exists(global_root):
         os.makedirs(global_root)
@@ -213,6 +214,7 @@ def result_saving(fused_output, img_name, img_height, img_width, output_dir, mas
         os.makedirs(instance_root)
     if not os.path.exists(tag_dir):
         os.makedirs(tag_dir)
+    os.makedirs(schp_dir, exist_ok=True)
 
     # For visualizing indexed png image.
     palette = get_palette(256)
@@ -249,7 +251,10 @@ def result_saving(fused_output, img_name, img_height, img_width, output_dir, mas
 
     output_im_global.save(os.path.join(global_root, os.path.splitext(img_name)[0] + '.png'))
     output_im_instance.save(os.path.join(instance_root, os.path.splitext(img_name)[0] + '.png'))
-    output_im_tag.save(os.path.join(tag_dir, os.path.splitext(img_name)[0] + '.png'))
+    for i in range(1, panoptic_seg_mask.max()+1):
+        instance = (panoptic_seg_mask==i)*255
+        outname = os.path.join(schp_dir, os.path.splitext(img_name)[0] + '_{}.png'.format(i))
+        cv2.imwrite(outname, instance)
     output_im_tag.putpalette(palette)
     output_im_tag.save(os.path.join(tag_dir, os.path.splitext(img_name)[0] + '_vis.png'))
 

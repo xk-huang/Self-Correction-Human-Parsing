@@ -1,7 +1,9 @@
-from easymocap.mytools.debug_utils import run_cmd, mywarn
 from os.path import join
 from os import chdir
 import os
+from glob import glob
+import shutil
+from termcolor import colored
 
 current_dir = os.path.dirname(__file__)
 
@@ -9,14 +11,32 @@ move_root = lambda: chdir(current_dir)
 move_mhp = lambda: chdir(join(current_dir, 'mhp_extension'))
 move_tool = lambda: chdir(join(current_dir, 'mhp_extension', 'detectron2', 'tools'))
 
+def myprint(cmd, level):
+    color = {'run': 'blue', 'info': 'green', 'warn': 'yellow', 'error': 'red'}[level]
+    print(colored(cmd, color))
+
+def log(text):
+    myprint(text, 'info')
+
+def mywarn(text):
+    myprint(text, 'warn')
+
+def myerror(text):
+    myprint(text, 'error')
+
+def run_cmd(cmd, verbo=True):
+    if verbo: myprint('[run] ' + cmd, 'run')
+    os.system(cmd)
+    return []
+
 def check_and_run(outname, cmd):
-    if (os.path.exists(outname) and os.path.isfile(outname)) or (os.path.isdir(outname) and len(os.listdir(outname)) > 0):
+    if (os.path.exists(outname) and os.path.isfile(outname)) or (os.path.isdir(outname) and len(os.listdir(outname)) >= 3):
         mywarn('Skip {}'.format(cmd))
     else:
         run_cmd(cmd)
 
 def schp_pipeline(img_dir, ckpt_dir):
-    tmp_dir = os.path.abspath(join('data', 'tmp_' + os.path.basename(img_dir)))
+    tmp_dir = os.path.abspath(join('data', 'tmp_' + '_'.join(img_dir.split(os.sep)[-3:])))
     move_mhp()
     annotations = join(tmp_dir, 'Demo.json')
     cmd = f"python3 ./coco_style_annotation_creator/test_human2coco_format.py --dataset 'Demo' --json_save_dir {tmp_dir} --test_img_dir {img_dir}"
@@ -45,6 +65,21 @@ def schp_pipeline(img_dir, ckpt_dir):
 
     cmd = f"python mhp_extension/logits_fusion.py --test_json_path {tmp_dir}/crop.json --global_output_dir {tmp_dir}/global_pic_parsing --gt_output_dir {tmp_dir}/crop_pic_parsing --mask_output_dir {tmp_dir}/crop_mask --save_dir {tmp_dir}/mhp_fusion_parsing"
     run_cmd(cmd)
+    # check the output
+    out_dir = join(tmp_dir, 'mhp_fusion_parsing', 'global_tag')
+    visnames = sorted(glob(join(out_dir, '*_vis.png')))
+    imgnames = sorted(glob(join(img_dir, '*.jpg')))
+    if len(visnames) == len(imgnames):
+        log('[log] Finish extracting')
+        log('[log] Copy results')
+        resdir = join('data', img_dir.split(os.sep)[-3], img_dir.split(os.sep)[-1])
+        os.makedirs(os.path.dirname(resdir), exist_ok=True)
+        shutil.copytree(join(tmp_dir, 'mhp_fusion_parsing', 'schp'), resdir)
+        for name in ['global_pic_parsing', 'crop_pic_parsing']:
+            dirname = join(tmp_dir, name)
+            if os.path.exists(dirname):
+                log('[log] remove {}'.format(dirname))
+                shutil.rmtree(dirname)
 
 if __name__ == '__main__':
     import argparse
