@@ -36,7 +36,10 @@ def check_and_run(outname, cmd):
         run_cmd(cmd)
 
 def schp_pipeline(img_dir, ckpt_dir):
-    tmp_dir = os.path.abspath(join('data', 'tmp_' + '_'.join(img_dir.split(os.sep)[-3:])))
+    tmp_dir = os.path.abspath(join(args.tmp, 'tmp_' + '_'.join(img_dir.split(os.sep)[-3:])))
+    resdir = join(args.tmp, img_dir.split(os.sep)[-3], img_dir.split(os.sep)[-1])
+    if os.path.exists(resdir):
+        return 0
     move_mhp()
     annotations = join(tmp_dir, 'Demo.json')
     cmd = f"python3 ./coco_style_annotation_creator/test_human2coco_format.py --dataset 'Demo' --json_save_dir {tmp_dir} --test_img_dir {img_dir}"
@@ -72,7 +75,6 @@ def schp_pipeline(img_dir, ckpt_dir):
     if len(visnames) == len(imgnames):
         log('[log] Finish extracting')
         log('[log] Copy results')
-        resdir = join('data', img_dir.split(os.sep)[-3], img_dir.split(os.sep)[-1])
         os.makedirs(os.path.dirname(resdir), exist_ok=True)
         shutil.copytree(join(tmp_dir, 'mhp_fusion_parsing', 'schp'), resdir)
         for name in ['global_pic_parsing', 'crop_pic_parsing']:
@@ -86,6 +88,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('path', type=str)
     parser.add_argument('--ckpt_dir', type=str, default='/nas/share')
+    parser.add_argument('--tmp', type=str, default='data')
     parser.add_argument('--debug', action='store_true')
     args = parser.parse_args()
 
