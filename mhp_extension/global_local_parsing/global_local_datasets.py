@@ -169,6 +169,8 @@ class CropDataValSet(data.Dataset):
         val_item = self.val_list[index]
         # Load training image
         im_path = os.path.join(self.root, self.split_name, val_item + '.jpg')
+        if not os.path.exists(im_path):
+            im_path = im_path.replace('.jpg', '.png')
         assert os.path.exists(im_path), im_path
         im = cv2.imread(im_path, cv2.IMREAD_COLOR)
         h, w, _ = im.shape

@@ -209,11 +209,11 @@ def result_saving(fused_output, img_name, img_height, img_width, output_dir, mas
     schp_dir = os.path.join(output_dir, 'schp')
 
     if not os.path.exists(global_root):
-        os.makedirs(global_root)
+        os.makedirs(global_root, exist_ok=True)
     if not os.path.exists(instance_root):
-        os.makedirs(instance_root)
+        os.makedirs(instance_root, exist_ok=True)
     if not os.path.exists(tag_dir):
-        os.makedirs(tag_dir)
+        os.makedirs(tag_dir, exist_ok=True)
     os.makedirs(schp_dir, exist_ok=True)
 
     # For visualizing indexed png image.

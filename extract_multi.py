@@ -5,7 +5,7 @@ from glob import glob
 import shutil
 from termcolor import colored
 
-current_dir = os.path.dirname(__file__)
+current_dir = os.path.abspath(os.path.dirname(__file__))
 
 move_root = lambda: chdir(current_dir)
 move_mhp = lambda: chdir(join(current_dir, 'mhp_extension'))
@@ -76,7 +76,8 @@ def schp_pipeline(img_dir, ckpt_dir):
         log('[log] Finish extracting')
         log('[log] Copy results')
         os.makedirs(os.path.dirname(resdir), exist_ok=True)
-        shutil.copytree(join(tmp_dir, 'mhp_fusion_parsing', 'schp'), resdir)
+        # shutil.copytree(join(tmp_dir, 'mhp_fusion_parsing', 'schp'), resdir)
+        os.system('cp -r {} {}'.format(join(tmp_dir, 'mhp_fusion_parsing', 'schp'), resdir))
         for name in ['global_pic_parsing', 'crop_pic_parsing']:
             dirname = join(tmp_dir, name)
             if os.path.exists(dirname):
