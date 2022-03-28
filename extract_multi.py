@@ -71,7 +71,7 @@ def schp_pipeline(img_dir, ckpt_dir):
     # check the output
     out_dir = join(tmp_dir, 'mhp_fusion_parsing', 'global_tag')
     visnames = sorted(glob(join(out_dir, '*_vis.png')))
-    imgnames = sorted(glob(join(img_dir, '*.jpg')))
+    imgnames = sorted(glob(join(img_dir, '*.jpg'))+glob(join(img_dir, '*.png')))
     if len(visnames) == len(imgnames):
         log('[log] Finish extracting')
         log('[log] Copy results')
