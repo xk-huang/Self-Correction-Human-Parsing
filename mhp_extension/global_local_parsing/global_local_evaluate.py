@@ -27,7 +27,7 @@ from utils.miou import compute_mean_ioU
 from utils.transforms import BGR2RGB_transform
 from utils.transforms import transform_parsing, transform_logits
 from mhp_extension.global_local_parsing.global_local_datasets import CropDataValSet
-
+from easymocap.mytools import Timer
 
 def get_arguments():
     """Parse all the arguments provided from the CLI.
@@ -202,7 +202,10 @@ def main():
                 # save logits
                 logits_result = transform_logits(logits, c, s, w, h, input_size)
                 logits_result_path = os.path.join(sp_results_dir, im_name + '.npy')
-                np.save(logits_result_path, logits_result)
+                # import ipdb; ipdb.set_trace()
+                with Timer('save npy', True):
+                    np.save(logits_result_path, logits_result)
+    Timer.report()
     return
 
 

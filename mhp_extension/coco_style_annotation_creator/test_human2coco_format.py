@@ -55,7 +55,7 @@ def main(args):
 
     image_id = 1
 
-    for image_name in tqdm(os.listdir(args.test_img_dir)):
+    for image_name in tqdm(sorted(os.listdir(args.test_img_dir))):
         image = Image.open(os.path.join(args.test_img_dir, image_name))
         image_info = pycococreatortools.create_image_info(
             image_id, image_name, image.size

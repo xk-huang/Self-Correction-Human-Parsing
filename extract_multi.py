@@ -55,6 +55,7 @@ def schp_pipeline(img_dir, ckpt_dir):
     move_mhp()
     cmd = f"python3 make_crop_and_mask_w_mask_nms.py --img_dir {img_dir} --save_dir {tmp_dir} --img_list {annotations} --det_res {tmp_dir}/detectron2_prediction/inference/instances_predictions.pth"
     check_and_run(join(tmp_dir, 'crop_pic'), cmd)
+    check_and_run(join(tmp_dir, 'crop.json'), cmd)
 
     move_root()
     os.environ['PYTHONPATH'] = '{}:{}'.format(current_dir, os.environ.get('PYTHONPATH', ''))
@@ -65,9 +66,9 @@ def schp_pipeline(img_dir, ckpt_dir):
         os.system('ln -s {} {}'.format(img_dir, join(tmp_dir, 'global_pic')))
     cmd = f"python mhp_extension/global_local_parsing/global_local_evaluate.py --data-dir {tmp_dir} --split-name global_pic --model-restore {ckpt_dir}/exp_schp_multi_cihp_global.pth --log-dir {tmp_dir} --save-results"
     check_and_run(join(tmp_dir, 'global_pic_parsing'), cmd)
-
     cmd = f"python mhp_extension/logits_fusion.py --test_json_path {tmp_dir}/crop.json --global_output_dir {tmp_dir}/global_pic_parsing --gt_output_dir {tmp_dir}/crop_pic_parsing --mask_output_dir {tmp_dir}/crop_mask --save_dir {tmp_dir}/mhp_fusion_parsing"
     run_cmd(cmd)
+
     # check the output
     out_dir = join(tmp_dir, 'mhp_fusion_parsing', 'global_tag')
     visnames = sorted(glob(join(out_dir, '*_vis.png')))

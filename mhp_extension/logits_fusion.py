@@ -253,7 +253,7 @@ def result_saving(fused_output, img_name, img_height, img_width, output_dir, mas
     output_im_instance.save(os.path.join(instance_root, os.path.splitext(img_name)[0] + '.png'))
     for i in range(1, panoptic_seg_mask.max()+1):
         instance = (panoptic_seg_mask==i)*255
-        outname = os.path.join(schp_dir, os.path.splitext(img_name)[0] + '_{}.png'.format(i))
+        outname = os.path.join(schp_dir, os.path.splitext(img_name)[0] + '_{}.png'.format(i-1))
         cv2.imwrite(outname, instance)
     output_im_tag.putpalette(palette)
     output_im_tag.save(os.path.join(tag_dir, os.path.splitext(img_name)[0] + '_vis.png'))
@@ -267,7 +267,6 @@ def multi_process(a, args):
 
     ######### loading outputs from gloabl and local models #########
     global_output = np.load(os.path.join(args.global_output_dir, os.path.splitext(img_name)[0] + '.npy'))
-
     # msrcnn_output = patch2img_output(args.msrcnn_output_dir, img_name, img_height, img_width, msrcnn_bbox,
                                     #  bbox_type='msrcnn', num_class=20)
 
@@ -287,7 +286,7 @@ def multi_process(a, args):
 def main(args):
     json_file = open(args.test_json_path)
     anno = json.load(json_file)['root']
-
+    # multi_process(anno[0], args)
     results = joblib.Parallel(n_jobs=24, verbose=10, pre_dispatch="all")(
         [joblib.delayed(multi_process)(a, args) for i, a in enumerate(anno)]
     )
