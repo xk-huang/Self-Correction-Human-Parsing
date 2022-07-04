@@ -37,9 +37,9 @@ def check_and_run(outname, cmd):
 
 def schp_pipeline(img_dir, ckpt_dir):
     tmp_dir = os.path.abspath(join(args.tmp, 'tmp_' + '_'.join(img_dir.split(os.sep)[-3:])))
-    resdir = join(args.tmp, img_dir.split(os.sep)[-3], img_dir.split(os.sep)[-1])
-    if os.path.exists(resdir):
-        return 0
+    seq = img_dir.split(os.sep)[-3]
+    sub = img_dir.split(os.sep)[-1]
+
     move_mhp()
     annotations = join(tmp_dir, 'Demo.json')
     cmd = f"python3 ./coco_style_annotation_creator/test_human2coco_format.py --dataset 'Demo' --json_save_dir {tmp_dir} --test_img_dir {img_dir}"
@@ -57,6 +57,22 @@ def schp_pipeline(img_dir, ckpt_dir):
     check_and_run(join(tmp_dir, 'crop_pic'), cmd)
     check_and_run(join(tmp_dir, 'crop.json'), cmd)
 
+    # check the output
+    out_dir = join(tmp_dir, 'mhp_fusion_parsing', 'global_tag')
+    visnames = sorted(glob(join(out_dir, '*_vis.png')))
+    imgnames = sorted(glob(join(img_dir, '*.jpg'))+glob(join(img_dir, '*.png')))
+    if len(visnames) == len(imgnames):
+        log('[log] Already has results')
+        log('[log] Copy results')
+        for srcname, dstname in [('schp', 'mask-schp'), ('global_tag', 'mask-schp-instance'), ('global_parsing', 'mask-schp-parsing')]:
+            dir_src = join(tmp_dir, 'mhp_fusion_parsing', srcname)
+            dir_dst = join(args.tmp, seq, dstname, sub)
+            if os.path.exists(dir_dst):
+                log('[log] Remove results')
+                shutil.rmtree(dir_dst)
+            os.makedirs(os.path.dirname(dir_dst), exist_ok=True)
+            os.system('cp -r {} {}'.format(dir_src, dir_dst))
+        return 0
     move_root()
     os.environ['PYTHONPATH'] = '{}:{}'.format(current_dir, os.environ.get('PYTHONPATH', ''))
     cmd = f"python3 mhp_extension/global_local_parsing/global_local_evaluate.py --data-dir {tmp_dir} --split-name crop_pic --model-restore {ckpt_dir}/exp_schp_multi_cihp_local.pth --log-dir {tmp_dir} --save-results"
@@ -76,9 +92,14 @@ def schp_pipeline(img_dir, ckpt_dir):
     if len(visnames) == len(imgnames):
         log('[log] Finish extracting')
         log('[log] Copy results')
-        os.makedirs(os.path.dirname(resdir), exist_ok=True)
-        # shutil.copytree(join(tmp_dir, 'mhp_fusion_parsing', 'schp'), resdir)
-        os.system('cp -r {} {}'.format(join(tmp_dir, 'mhp_fusion_parsing', 'schp'), resdir))
+        for srcname, dstname in [('schp', 'mask-schp'), ('global_tag', 'mask-schp-instance'), ('global_parsing', 'mask-schp-parsing')]:
+            dir_src = join(tmp_dir, 'mhp_fusion_parsing', srcname)
+            dir_dst = join(args.tmp, seq, dstname, sub)
+            if os.path.exists(dir_dst):
+                log('[log] Skip copy results')
+                continue
+            os.makedirs(os.path.dirname(dir_dst), exist_ok=True)
+            run_cmd('cp -r {} {}'.format(dir_src, dir_dst))
         for name in ['global_pic_parsing', 'crop_pic_parsing']:
             dirname = join(tmp_dir, name)
             if os.path.exists(dirname):
@@ -88,11 +109,16 @@ def schp_pipeline(img_dir, ckpt_dir):
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('path', type=str)
+    parser.add_argument('path', type=str, nargs='+')
     parser.add_argument('--ckpt_dir', type=str, default='/nas/share')
     parser.add_argument('--tmp', type=str, default='data')
     parser.add_argument('--debug', action='store_true')
     args = parser.parse_args()
 
-    for sub in sorted(os.listdir(join(args.path, 'images'))):
-        schp_pipeline(join(args.path, 'images', sub), args.ckpt_dir)
+    for path in args.path:
+        if not os.path.isdir(path) or \
+            not os.path.exists(join(path, 'images')):
+            myerror('{} not exist!'.format(path))
+            continue
+        for sub in sorted(os.listdir(join(path, 'images'))):
+            schp_pipeline(join(path, 'images', sub), args.ckpt_dir)
