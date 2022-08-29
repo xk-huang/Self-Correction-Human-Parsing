@@ -68,8 +68,11 @@ def schp_pipeline(img_dir, ckpt_dir):
             dir_src = join(tmp_dir, 'mhp_fusion_parsing', srcname)
             dir_dst = join(args.tmp, seq, dstname, sub)
             if os.path.exists(dir_dst):
-                log('[log] Remove results')
-                shutil.rmtree(dir_dst)
+                if False:
+                    log('[log] Remove results')
+                    shutil.rmtree(dir_dst)
+                else:
+                    continue
             os.makedirs(os.path.dirname(dir_dst), exist_ok=True)
             os.system('cp -r {} {}'.format(dir_src, dir_dst))
         return 0
@@ -110,15 +113,36 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('path', type=str, nargs='+')
+    parser.add_argument('--subs', type=str, nargs='+', default=[])
+    parser.add_argument('--gpus', type=str, nargs='+', default=[])
     parser.add_argument('--ckpt_dir', type=str, default='/nas/share')
     parser.add_argument('--tmp', type=str, default='data')
     parser.add_argument('--debug', action='store_true')
     args = parser.parse_args()
 
-    for path in args.path:
-        if not os.path.isdir(path) or \
-            not os.path.exists(join(path, 'images')):
-            myerror('{} not exist!'.format(path))
-            continue
-        for sub in sorted(os.listdir(join(path, 'images'))):
-            schp_pipeline(join(path, 'images', sub), args.ckpt_dir)
+    # check checkpoints
+    for name in ['detectron2_maskrcnn_cihp_finetune.pth', 'exp_schp_multi_cihp_local.pth', 'exp_schp_multi_cihp_global.pth']:
+        if not os.path.exists(join(args.ckpt_dir, name)):
+            assert False, '{} does not exist'.format(join(args.ckpt_dir, name))
+    if len(args.gpus) > 1:
+        # 使用多卡来调
+        assert len(args.path) >= 1, 'Only support 1 path for multiple GPU'
+        from easymocap.mytools.debug_utils import run_cmd
+        subs = sorted(os.listdir(join(args.path[0], 'images')))
+        nproc = len(args.gpus)
+        for i in range(len(args.gpus)):
+            cmd = f'export CUDA_VISIBLE_DEVICES={args.gpus[i]} && python3 extract_multi.py {" ".join(args.path)} --subs {" ".join(subs[i::nproc])} --ckpt_dir {args.ckpt_dir} --tmp {args.tmp}'
+            cmd += ' &'
+            run_cmd(cmd)
+    else:
+        for path in args.path:
+            if not os.path.isdir(path) or \
+                not os.path.exists(join(path, 'images')):
+                myerror('{} not exist!'.format(path))
+                continue
+            if len(args.subs) == 0:
+                subs = sorted(os.listdir(join(path, 'images')))
+            else:
+                subs = args.subs 
+            for sub in subs:
+                schp_pipeline(join(path, 'images', sub), args.ckpt_dir)
