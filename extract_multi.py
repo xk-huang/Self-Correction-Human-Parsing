@@ -127,6 +127,10 @@ if __name__ == '__main__':
     if len(args.gpus) > 1:
         # 使用多卡来调
         assert len(args.path) >= 1, 'Only support 1 path for multiple GPU'
+
+        if len(args.subs) != 0:
+            raise ValueError('Not support subs for multiple GPU')
+
         from easymocap.mytools.debug_utils import run_cmd
         subs = sorted(os.listdir(join(args.path[0], 'images')))
         nproc = len(args.gpus)
