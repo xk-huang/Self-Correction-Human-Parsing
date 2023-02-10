@@ -42,18 +42,18 @@ def schp_pipeline(img_dir, ckpt_dir):
 
     move_mhp()
     annotations = join(tmp_dir, 'Demo.json')
-    cmd = f"python3 ./coco_style_annotation_creator/test_human2coco_format.py --dataset 'Demo' --json_save_dir {tmp_dir} --test_img_dir {img_dir}"
+    cmd = f"python3 ./coco_style_annotation_creator/test_human2coco_format.py --dataset 'Demo' --json_save_dir '{tmp_dir}' --test_img_dir '{img_dir}'"
     check_and_run(annotations, cmd)
 
     move_tool()
     # 通过设置环境变量来控制
     os.environ['annotations'] = annotations
     os.environ['img_dir'] = img_dir
-    cmd = f"python3 ./finetune_net.py --num-gpus 1 --config-file ../configs/Misc/demo.yaml --eval-only MODEL.WEIGHTS {join(ckpt_dir, 'detectron2_maskrcnn_cihp_finetune.pth')} TEST.AUG.ENABLED False DATALOADER.NUM_WORKERS 0 OUTPUT_DIR {join(tmp_dir, 'detectron2_prediction')}"
+    cmd = f"python3 ./finetune_net.py --num-gpus 1 --config-file ../configs/Misc/demo.yaml --eval-only MODEL.WEIGHTS {join(ckpt_dir, 'detectron2_maskrcnn_cihp_finetune.pth')} TEST.AUG.ENABLED False DATALOADER.NUM_WORKERS 0 OUTPUT_DIR '{join(tmp_dir, 'detectron2_prediction')}'"
     check_and_run(join(tmp_dir, 'detectron2_prediction'), cmd)
 
     move_mhp()
-    cmd = f"python3 make_crop_and_mask_w_mask_nms.py --img_dir {img_dir} --save_dir {tmp_dir} --img_list {annotations} --det_res {tmp_dir}/detectron2_prediction/inference/instances_predictions.pth"
+    cmd = f"python3 make_crop_and_mask_w_mask_nms.py --img_dir '{img_dir}' --save_dir '{tmp_dir}' --img_list '{annotations}' --det_res '{tmp_dir}/detectron2_prediction/inference/instances_predictions.pth'"
     check_and_run(join(tmp_dir, 'crop_pic'), cmd)
     check_and_run(join(tmp_dir, 'crop.json'), cmd)
 
@@ -78,14 +78,14 @@ def schp_pipeline(img_dir, ckpt_dir):
         return 0
     move_root()
     os.environ['PYTHONPATH'] = '{}:{}'.format(current_dir, os.environ.get('PYTHONPATH', ''))
-    cmd = f"python3 mhp_extension/global_local_parsing/global_local_evaluate.py --data-dir {tmp_dir} --split-name crop_pic --model-restore {ckpt_dir}/exp_schp_multi_cihp_local.pth --log-dir {tmp_dir} --save-results"
+    cmd = f"python3 mhp_extension/global_local_parsing/global_local_evaluate.py --data-dir '{tmp_dir}' --split-name crop_pic --model-restore '{ckpt_dir}/exp_schp_multi_cihp_local.pth' --log-dir '{tmp_dir}' --save-results"
     check_and_run(join(tmp_dir, 'crop_pic_parsing'), cmd)
 
     if not os.path.exists(join(tmp_dir, 'global_pic')):
         os.system('ln -s {} {}'.format(img_dir, join(tmp_dir, 'global_pic')))
     cmd = f"python mhp_extension/global_local_parsing/global_local_evaluate.py --data-dir {tmp_dir} --split-name global_pic --model-restore {ckpt_dir}/exp_schp_multi_cihp_global.pth --log-dir {tmp_dir} --save-results"
     check_and_run(join(tmp_dir, 'global_pic_parsing'), cmd)
-    cmd = f"python mhp_extension/logits_fusion.py --test_json_path {tmp_dir}/crop.json --global_output_dir {tmp_dir}/global_pic_parsing --gt_output_dir {tmp_dir}/crop_pic_parsing --mask_output_dir {tmp_dir}/crop_mask --save_dir {tmp_dir}/mhp_fusion_parsing"
+    cmd = f"python mhp_extension/logits_fusion.py --test_json_path '{tmp_dir}/crop.json' --global_output_dir '{tmp_dir}/global_pic_parsing' --gt_output_dir '{tmp_dir}/crop_pic_parsing' --mask_output_dir '{tmp_dir}/crop_mask' --save_dir '{tmp_dir}/mhp_fusion_parsing'"
     run_cmd(cmd)
 
     # check the output
@@ -115,7 +115,7 @@ if __name__ == '__main__':
     parser.add_argument('path', type=str, nargs='+')
     parser.add_argument('--subs', type=str, nargs='+', default=[])
     parser.add_argument('--gpus', type=str, nargs='+', default=[])
-    parser.add_argument('--ckpt_dir', type=str, default='/nas/share')
+    parser.add_argument('--ckpt_dir', type=str, default='pretrain_model')
     parser.add_argument('--tmp', type=str, default='data')
     parser.add_argument('--debug', action='store_true')
     args = parser.parse_args()
