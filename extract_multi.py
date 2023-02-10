@@ -74,7 +74,7 @@ def schp_pipeline(img_dir, ckpt_dir):
                 else:
                     continue
             os.makedirs(os.path.dirname(dir_dst), exist_ok=True)
-            os.system('cp -r {} {}'.format(dir_src, dir_dst))
+            os.system('cp -r \'{}\' \'{}\''.format(dir_src, dir_dst))
         return 0
     move_root()
     os.environ['PYTHONPATH'] = '{}:{}'.format(current_dir, os.environ.get('PYTHONPATH', ''))
@@ -82,8 +82,8 @@ def schp_pipeline(img_dir, ckpt_dir):
     check_and_run(join(tmp_dir, 'crop_pic_parsing'), cmd)
 
     if not os.path.exists(join(tmp_dir, 'global_pic')):
-        os.system('ln -s {} {}'.format(img_dir, join(tmp_dir, 'global_pic')))
-    cmd = f"python mhp_extension/global_local_parsing/global_local_evaluate.py --data-dir {tmp_dir} --split-name global_pic --model-restore {ckpt_dir}/exp_schp_multi_cihp_global.pth --log-dir {tmp_dir} --save-results"
+        os.system('ln -s \'{}\' \'{}\''.format(img_dir, join(tmp_dir, 'global_pic')))
+    cmd = f"python mhp_extension/global_local_parsing/global_local_evaluate.py --data-dir '{tmp_dir}' --split-name global_pic --model-restore '{ckpt_dir}/exp_schp_multi_cihp_global.pth' --log-dir '{tmp_dir}' --save-results"
     check_and_run(join(tmp_dir, 'global_pic_parsing'), cmd)
     cmd = f"python mhp_extension/logits_fusion.py --test_json_path '{tmp_dir}/crop.json' --global_output_dir '{tmp_dir}/global_pic_parsing' --gt_output_dir '{tmp_dir}/crop_pic_parsing' --mask_output_dir '{tmp_dir}/crop_mask' --save_dir '{tmp_dir}/mhp_fusion_parsing'"
     run_cmd(cmd)
