@@ -36,7 +36,10 @@ def check_and_run(outname, cmd):
         run_cmd(cmd)
 
 def schp_pipeline(img_dir, ckpt_dir):
+    # [XXX] the img_dir must be /$name_of_root_dir/images/$name_of_sub
+    # For use str.split to get the name of root_dir and sub
     tmp_dir = os.path.abspath(join(args.tmp, 'tmp_' + '_'.join(img_dir.split(os.sep)[-3:])))
+    root_dir = os.sep.join(img_dir.split(os.sep)[:-2])
     seq = img_dir.split(os.sep)[-3]
     sub = img_dir.split(os.sep)[-1]
 
@@ -50,14 +53,17 @@ def schp_pipeline(img_dir, ckpt_dir):
     os.environ['annotations'] = annotations
     os.environ['img_dir'] = img_dir
     cmd = f"python3 ./finetune_net.py --num-gpus 1 --config-file ../configs/Misc/demo.yaml --eval-only MODEL.WEIGHTS {join(ckpt_dir, 'detectron2_maskrcnn_cihp_finetune.pth')} TEST.AUG.ENABLED False DATALOADER.NUM_WORKERS 0 OUTPUT_DIR '{join(tmp_dir, 'detectron2_prediction')}'"
-    check_and_run(join(tmp_dir, 'detectron2_prediction'), cmd)
+    # [XXX] instead of check dir, check the output file
+    check_and_run(join(tmp_dir, 'detectron2_prediction', 'inference', 'instances_predictions.pth'), cmd)
 
     move_mhp()
     cmd = f"python3 make_crop_and_mask_w_mask_nms.py --img_dir '{img_dir}' --save_dir '{tmp_dir}' --img_list '{annotations}' --det_res '{tmp_dir}/detectron2_prediction/inference/instances_predictions.pth'"
     check_and_run(join(tmp_dir, 'crop_pic'), cmd)
     check_and_run(join(tmp_dir, 'crop.json'), cmd)
 
-    # check the output
+    # [XXX] check the output for fear there are processed files
+    # No need to run `mhp_extension/global_local_parsing/global_local_evaluate.py` to run
+    # and `mhp_extension/logits_fusion.py` to parse, again.
     out_dir = join(tmp_dir, 'mhp_fusion_parsing', 'global_tag')
     visnames = sorted(glob(join(out_dir, '*_vis.png')))
     imgnames = sorted(glob(join(img_dir, '*.jpg'))+glob(join(img_dir, '*.png')))
@@ -75,7 +81,15 @@ def schp_pipeline(img_dir, ckpt_dir):
                     continue
             os.makedirs(os.path.dirname(dir_dst), exist_ok=True)
             os.system('cp -r \'{}\' \'{}\''.format(dir_src, dir_dst))
+
+        # copy the results to the root_dir
+        dir_src_final = join(tmp_dir, 'mhp_fusion_parsing', 'schp')
+        dir_dst_final = join(root_dir, 'mask-schp', sub)
+        os.makedirs(os.path.dirname(dir_dst_final), exist_ok=True)  # to avoid making sub folder
+        os.system('cp -r \'{}\' \'{}\''.format(dir_src_final, dir_dst_final))
+
         return 0
+
     move_root()
     os.environ['PYTHONPATH'] = '{}:{}'.format(current_dir, os.environ.get('PYTHONPATH', ''))
     cmd = f"python3 mhp_extension/global_local_parsing/global_local_evaluate.py --data-dir '{tmp_dir}' --split-name crop_pic --model-restore '{ckpt_dir}/exp_schp_multi_cihp_local.pth' --log-dir '{tmp_dir}' --save-results"
@@ -102,7 +116,14 @@ def schp_pipeline(img_dir, ckpt_dir):
                 log('[log] Skip copy results')
                 continue
             os.makedirs(os.path.dirname(dir_dst), exist_ok=True)
-            run_cmd('cp -r {} {}'.format(dir_src, dir_dst))
+            run_cmd('cp -r \'{}\' \'{}\''.format(dir_src, dir_dst))
+
+        # copy the results to the root_dir
+        dir_src_final = join(tmp_dir, 'mhp_fusion_parsing', 'schp')
+        dir_dst_final = join(root_dir, 'mask-schp', sub)
+        os.makedirs(os.path.dirname(dir_dst_final), exist_ok=True)  # to avoid making sub folder
+        os.system('cp -r \'{}\' \'{}\''.format(dir_src_final, dir_dst_final))
+
         for name in ['global_pic_parsing', 'crop_pic_parsing']:
             dirname = join(tmp_dir, name)
             if os.path.exists(dirname):
@@ -119,6 +140,10 @@ if __name__ == '__main__':
     parser.add_argument('--tmp', type=str, default='data')
     parser.add_argument('--debug', action='store_true')
     args = parser.parse_args()
+    
+    args.path = [os.path.abspath(p) for p in args.path]
+    args.ckpt_dir = os.path.abspath(args.ckpt_dir)
+    args.tmp = os.path.abspath(args.tmp)
 
     # check checkpoints
     for name in ['detectron2_maskrcnn_cihp_finetune.pth', 'exp_schp_multi_cihp_local.pth', 'exp_schp_multi_cihp_global.pth']:
@@ -128,14 +153,17 @@ if __name__ == '__main__':
         # 使用多卡来调
         assert len(args.path) >= 1, 'Only support 1 path for multiple GPU'
 
-        if len(args.subs) != 0:
-            raise ValueError('Not support subs for multiple GPU')
-
         from easymocap.mytools.debug_utils import run_cmd
         subs = sorted(os.listdir(join(args.path[0], 'images')))
         nproc = len(args.gpus)
+
         for i in range(len(args.gpus)):
-            cmd = f'export CUDA_VISIBLE_DEVICES={args.gpus[i]} && python3 extract_multi.py {" ".join(args.path)} --subs {" ".join(subs[i::nproc])} --ckpt_dir {args.ckpt_dir} --tmp {args.tmp}'
+            # [XXX] if there is no sub for this gpu, break
+            subs_per_gpu = subs[i::nproc]
+            if len(subs_per_gpu) == 0:
+                break
+            subs_per_gpu_cmd = "' '".join(subs_per_gpu)
+            cmd = f'export CUDA_VISIBLE_DEVICES={args.gpus[i]} && python3 extract_multi.py \'{" ".join(args.path)}\' --subs \'{subs_per_gpu_cmd}\' --ckpt_dir \'{args.ckpt_dir}\' --tmp \'{args.tmp}\''
             cmd += ' &'
             run_cmd(cmd)
     else:
