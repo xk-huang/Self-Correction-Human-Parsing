@@ -70,23 +70,24 @@ def schp_pipeline(img_dir, ckpt_dir):
     if len(visnames) == len(imgnames):
         log('[log] Already has results')
         log('[log] Copy results')
-        for srcname, dstname in [('schp', 'mask-schp'), ('global_tag', 'mask-schp-instance'), ('global_parsing', 'mask-schp-parsing')]:
-            dir_src = join(tmp_dir, 'mhp_fusion_parsing', srcname)
-            dir_dst = join(args.tmp, seq, dstname, sub)
-            if os.path.exists(dir_dst):
-                if False:
-                    log('[log] Remove results')
-                    shutil.rmtree(dir_dst)
-                else:
-                    continue
-            os.makedirs(os.path.dirname(dir_dst), exist_ok=True)
-            os.system('cp -r \'{}\' \'{}\''.format(dir_src, dir_dst))
+        # for srcname, dstname in [('schp', 'mask-schp'), ('global_tag', 'mask-schp-instance'), ('global_parsing', 'mask-schp-parsing')]:
+        #     dir_src = join(tmp_dir, 'mhp_fusion_parsing', srcname)
+        #     dir_dst = join(args.tmp, seq, dstname, sub)
+        #     if os.path.exists(dir_dst):
+        #         if False:
+        #             log('[log] Remove results')
+        #             shutil.rmtree(dir_dst)
+        #         else:
+        #             continue
+        #     os.makedirs(os.path.dirname(dir_dst), exist_ok=True)
+        #     os.system('cp -r \'{}\' \'{}\''.format(dir_src, dir_dst))
 
         # copy the results to the root_dir
         dir_src_final = join(tmp_dir, 'mhp_fusion_parsing', 'schp')
         dir_dst_final = join(root_dir, 'mask-schp', sub)
-        os.makedirs(os.path.dirname(dir_dst_final), exist_ok=True)  # to avoid making sub folder
-        os.system('cp -r \'{}\' \'{}\''.format(dir_src_final, dir_dst_final))
+        if not os.path.exists(dir_dst_final):
+            os.makedirs(os.path.dirname(dir_dst_final), exist_ok=True)  # to avoid making sub folder
+            os.system('cp -r \'{}\' \'{}\''.format(dir_src_final, dir_dst_final))
 
         return 0
 
@@ -109,20 +110,21 @@ def schp_pipeline(img_dir, ckpt_dir):
     if len(visnames) == len(imgnames):
         log('[log] Finish extracting')
         log('[log] Copy results')
-        for srcname, dstname in [('schp', 'mask-schp'), ('global_tag', 'mask-schp-instance'), ('global_parsing', 'mask-schp-parsing')]:
-            dir_src = join(tmp_dir, 'mhp_fusion_parsing', srcname)
-            dir_dst = join(args.tmp, seq, dstname, sub)
-            if os.path.exists(dir_dst):
-                log('[log] Skip copy results')
-                continue
-            os.makedirs(os.path.dirname(dir_dst), exist_ok=True)
-            run_cmd('cp -r \'{}\' \'{}\''.format(dir_src, dir_dst))
+        # for srcname, dstname in [('schp', 'mask-schp'), ('global_tag', 'mask-schp-instance'), ('global_parsing', 'mask-schp-parsing')]:
+        #     dir_src = join(tmp_dir, 'mhp_fusion_parsing', srcname)
+        #     dir_dst = join(args.tmp, seq, dstname, sub)
+        #     if os.path.exists(dir_dst):
+        #         log('[log] Skip copy results')
+        #         continue
+        #     os.makedirs(os.path.dirname(dir_dst), exist_ok=True)
+        #     run_cmd('cp -r \'{}\' \'{}\''.format(dir_src, dir_dst))
 
         # copy the results to the root_dir
         dir_src_final = join(tmp_dir, 'mhp_fusion_parsing', 'schp')
         dir_dst_final = join(root_dir, 'mask-schp', sub)
-        os.makedirs(os.path.dirname(dir_dst_final), exist_ok=True)  # to avoid making sub folder
-        os.system('cp -r \'{}\' \'{}\''.format(dir_src_final, dir_dst_final))
+        if not os.path.exists(dir_dst_final):
+            os.makedirs(os.path.dirname(dir_dst_final), exist_ok=True)  # to avoid making sub folder
+            os.system('cp -r \'{}\' \'{}\''.format(dir_src_final, dir_dst_final))
 
         for name in ['global_pic_parsing', 'crop_pic_parsing']:
             dirname = join(tmp_dir, name)
