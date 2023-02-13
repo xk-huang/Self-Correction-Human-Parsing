@@ -26,7 +26,11 @@ def myerror(text):
 
 def run_cmd(cmd, verbo=True):
     if verbo: myprint('[run] ' + cmd, 'run')
-    os.system(cmd)
+    ret_code = os.system(cmd)
+    ret_code = int('{:08b}'.format(ret_code)[::-1], 2)
+    if ret_code != 0:
+        myerror('Error code {} in running command: {}'.format(ret_code, cmd))
+        exit(ret_code)
     return []
 
 def check_and_run(outname, cmd):
@@ -99,7 +103,12 @@ def schp_pipeline(img_dir, ckpt_dir):
     if not os.path.exists(join(tmp_dir, 'global_pic')):
         os.system('ln -s \'{}\' \'{}\''.format(img_dir, join(tmp_dir, 'global_pic')))
     cmd = f"python mhp_extension/global_local_parsing/global_local_evaluate.py --data-dir '{tmp_dir}' --split-name global_pic --model-restore '{ckpt_dir}/exp_schp_multi_cihp_global.pth' --log-dir '{tmp_dir}' --save-results"
-    check_and_run(join(tmp_dir, 'global_pic_parsing'), cmd)
+    # check_and_run(join(tmp_dir, 'global_pic_parsing'), cmd)
+    global_pic_parsing_dir = join(tmp_dir, 'global_pic_parsing')
+    condition = (not os.path.exists(global_pic_parsing_dir)) or (len(glob(join(global_pic_parsing_dir, '*.npy'))) != len(imgnames))
+    if condition:
+        run_cmd(cmd)
+    
     cmd = f"python mhp_extension/logits_fusion.py --test_json_path '{tmp_dir}/crop.json' --global_output_dir '{tmp_dir}/global_pic_parsing' --gt_output_dir '{tmp_dir}/crop_pic_parsing' --mask_output_dir '{tmp_dir}/crop_mask' --save_dir '{tmp_dir}/mhp_fusion_parsing'"
     run_cmd(cmd)
 
@@ -155,10 +164,12 @@ if __name__ == '__main__':
         # 使用多卡来调
         assert len(args.path) >= 1, 'Only support 1 path for multiple GPU'
 
-        from easymocap.mytools.debug_utils import run_cmd
+        # from easymocap.mytools.debug_utils import run_cmd
+        import subprocess
         subs = sorted(os.listdir(join(args.path[0], 'images')))
         nproc = len(args.gpus)
 
+        proc_list = []
         for i in range(len(args.gpus)):
             # [XXX] if there is no sub for this gpu, break
             subs_per_gpu = subs[i::nproc]
@@ -166,8 +177,15 @@ if __name__ == '__main__':
                 break
             subs_per_gpu_cmd = "' '".join(subs_per_gpu)
             cmd = f'export CUDA_VISIBLE_DEVICES={args.gpus[i]} && python3 extract_multi.py \'{" ".join(args.path)}\' --subs \'{subs_per_gpu_cmd}\' --ckpt_dir \'{args.ckpt_dir}\' --tmp \'{args.tmp}\''
-            cmd += ' &'
-            run_cmd(cmd)
+            proc_list.append(subprocess.Popen(cmd, shell=True))
+
+            # cmd += ' &'
+            # run_cmd(cmd)
+
+        log('Wait for all subprocesses to finish...')
+        for proc in proc_list:
+            proc.wait()
+        log('Finish all')
     else:
         for path in args.path:
             if not os.path.isdir(path) or \
