@@ -93,6 +93,12 @@ def schp_pipeline(img_dir, ckpt_dir):
             os.makedirs(os.path.dirname(dir_dst_final), exist_ok=True)  # to avoid making sub folder
             os.system('cp -r \'{}\' \'{}\''.format(dir_src_final, dir_dst_final))
 
+        for name in ['global_pic_parsing', 'crop_pic_parsing']:
+            dirname = join(tmp_dir, name)
+            if os.path.exists(dirname):
+                log('[log] remove {}'.format(dirname))
+                shutil.rmtree(dirname)
+
         return 0
 
     move_root()
